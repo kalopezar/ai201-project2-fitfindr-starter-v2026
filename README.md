@@ -41,7 +41,7 @@
 
 <!-- Three or four sentences: what a user asks for, and what they get back. -->
 
-
+FitFindr helps someone search thrift listings with a plain-language request, including optional size and price limits. It returns matching items ranked by keyword match. It can suggest outfits using pieces in the user's wardrobe, or general styling ideas when the wardrobe is empty. It also creates a short social caption for the outfit, while an empty search returns suggestions for broadening the query.
 
 ---
 
@@ -170,15 +170,15 @@ $ python -c "from tools import create_fit_card; from utils.data_loader import lo
 
 **Moment 1**
 
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+- *What I asked for:* I asked Copilot to specify each tool's inputs, return values, and empty cases before implementation.
+- *What came back:* The first search description said only that results were ranked by "keyword overlap," which left the matching fields and scoring ambiguous.
+- *What I changed:* I challenged whether another developer could implement that description without clarification, then added the tokenization, stopwords, field weights, zero-score rule, and tie behavior to the Tool Inventory.
 
 **Moment 2**
 
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+- *What I asked for:* I asked Copilot to run both a matching query and an impossible query, print the session, and check whether the selected listing was the one sent to `suggest_outfit`.
+- *What came back:* The matching run selected `lst_002` as the first search result and passed that same item to `suggest_outfit`; the impossible query left `fit_card` as `None` and suggested which filters or keywords to change.
+- *What I changed:* I recorded the parsing and session flow plus both CLI outcomes in this README, and verified the handoff with a tool-call spy.
 
 <!-- ═══════════════════════ UNIT 4 — THE TEST ═══════════════════════
 
