@@ -59,24 +59,24 @@
 
 ### `search_listings`
 
-- **What it does:**
-- **Inputs:** <!-- name and type each: `max_price` (float), not "a price" -->
-- **Returns:**
-- **When it has nothing:**
+- **What it does:** Searches thrift listings for description keywords, with optional size and inclusive maximum-price filters, then ranks matches by keyword overlap. Matching lowercases and splits on non-alphanumeric characters, ignores one-character tokens and `a`, `an`, `and`, `are`, `as`, `at`, `be`, `by`, `for`, and `from`, then scores each distinct query token as 2 for a title/category/style-tag hit or otherwise 1 for a description/color/brand hit; zero-score listings are dropped, results sort by score descending, and dataset order breaks ties.
+- **Inputs:** `description` (`str`); `size` (`str | None`); `max_price` (`float | None`). A requested size matches a complete size token (so `M` matches `S/M`); `One Size` listings match any requested size.
+- **Returns:** A `list[dict]` of matching listing records, ranked best first and limited to `config.SEARCH_RESULT_LIMIT`. Each record has `id`, `title`, `description`, `category`, `style_tags` (`list[str]`), `size`, `condition`, `price` (`float`), `colors` (`list[str]`), `brand` (`str | None`), and `platform`.
+- **When it has nothing:** Returns `[]` when no useful description keywords are provided or no listing matches all supplied filters and at least one keyword.
 
 ### `suggest_outfit`
 
-- **What it does:**
-- **Inputs:**
-- **Returns:**
-- **When it has nothing:**
+- **What it does:** Uses the language model to suggest one or two outfits built around a thrift listing, using owned wardrobe pieces when available.
+- **Inputs:** `new_item` (`dict`, one listing record with the fields described above); `wardrobe` (`dict` with an `items` key containing `list[dict]` wardrobe pieces, each with `id`, `name`, `category`, `colors`, `style_tags`, and optional `notes`).
+- **Returns:** A non-empty `str` containing outfit suggestions. With wardrobe items, suggestions name and use only listed pieces; with no items, the string gives general styling ideas.
+- **When it has nothing:** An empty wardrobe is not a no-result: it gets general styling advice. If the model returns an empty response, the tool returns a non-empty retry message instead of `""`.
 
 ### `create_fit_card`
 
-- **What it does:**
-- **Inputs:**
-- **Returns:**
-- **When it has nothing:**
+- **What it does:** Uses the language model to write a casual social caption for an outfit featuring a thrifted listing.
+- **Inputs:** `outfit` (`str`, an outfit suggestion); `new_item` (`dict`, one listing record with the fields described above).
+- **Returns:** A `str` caption of two to four sentences, mentioning the item, price, and platform once each and describing the look's vibe.
+- **When it has nothing:** If `outfit` is empty or whitespace, returns a descriptive message asking for an outfit suggestion first. If the model returns an empty response for a non-empty outfit, returns a short fallback caption.
 
 ---
 
@@ -93,7 +93,7 @@
      The grader checks your code against what you claim here, so the file and
      function have to be real. -->
 
-**Branch rule:**
+**Branch rule:** If `search_listings` returns an empty list, put a no-results message in the session and stop. Otherwise, take the first result and go to `suggest_outfit`.
 
 **Where it lives:** `agent.py::run_agent`
 
