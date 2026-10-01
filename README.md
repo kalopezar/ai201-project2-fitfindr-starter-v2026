@@ -120,18 +120,18 @@ $ python app.py ask '...'
 **The three tools, tested one at a time**
 
 ```
-$ python -c "from tools import search_listings; print(search_listings('graphic tee', max_price=30))"
-
+$ python -c "from tools import search_listings; matches = search_listings('graphic tee', max_price=30); empty = search_listings('zzzzqxv'); assert matches and all(item['price'] <= 30 for item in matches); assert empty == []; print(([(item['title'], item['price'], item['size'], item['platform']) for item in matches], empty))"
+([('Y2K Baby Tee — Butterfly Print', 18.0, 'S/M', 'depop'), ('Graphic Tee — 2003 Tour Bootleg Style', 24.0, 'L', 'depop'), ('Vintage Band Tee — Faded Grey', 19.0, 'L', 'depop'), ('Vintage Graphic Hoodie — Faded Black', 26.0, 'L', 'depop'), ('Mesh Long-Sleeve Top — Black', 15.0, 'S/M', 'depop'), ('Low-Rise Cargo Pants — Khaki', 27.0, 'W29', 'poshmark')], [])
 ```
 
 ```
-$ python -c "from tools import suggest_outfit; ..."
-
+$ python -c "from tools import suggest_outfit; from utils.data_loader import get_empty_wardrobe, load_listings; answer = suggest_outfit(load_listings()[0], get_empty_wardrobe()); assert isinstance(answer, str) and answer.strip(); print(answer.replace('\n', ' '))"
+Grab those 501s immediately! Vintage Levi’s are the holy grail of thrift shopping. Since they have that great medium wash and broken-in knee fade, they are super versatile.   For an easy casual look, pair them with a boxy white graphic tee, some well-worn white sneakers, and a classic canvas tote bag. Throw on a simple silver chain to finish it off.   For something a bit sharper, dress them up with an oversized black blazer layered over a fitted ribbed tank top. Add some retro leather loafers and a sleek black belt to tie the whole outfit together.   You will wear these constantly!
 ```
 
 ```
-$ python -c "from tools import create_fit_card; ..."
-
+$ python -c "from tools import create_fit_card; from utils.data_loader import load_listings; item = load_listings()[0]; caption = create_fit_card('jeans and white sneakers', item); empty = create_fit_card('   ', item); assert isinstance(caption, str) and caption.strip(); assert empty.startswith('No outfit to caption yet'); print((caption.replace('\n', ' '), empty))"
+("Nothing beats finding a pair of vintage Levi’s 501s that actually fit right in the waist. Snagged these for $38 on depop and honestly haven't taken them off since with my beat-up white sneakers. It's giving that effortless 90s streetwear vibe without even trying. #thriftfinds", "No outfit to caption yet for Vintage Levi's 501 Jeans — Medium Wash — get an outfit suggestion first, then make the fit card.")
 ```
 
 ---
