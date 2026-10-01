@@ -97,9 +97,9 @@
 
 **Where it lives:** `agent.py::run_agent`
 
-**How the query is parsed:** <!-- regex, string splitting, or asking the model — say which -->
+**How the query is parsed:** Regular expressions extract an optional price ceiling and `size ...` filter; another regex removes common request lead-ins, and the remaining words become the search description.
 
-**What moves through the session:** <!-- which fields, in what order -->
+**What moves through the session:** `query` is parsed into `parsed`; `search_results` stores the tool results; the first result is copied to `selected_item` and passed with `wardrobe` to `suggest_outfit`; its string goes to `outfit_suggestion` and, with `selected_item`, to `create_fit_card`, whose result is stored in `fit_card`. If search is empty, `error` is set and the later fields remain unset.
 
 ---
 
@@ -113,7 +113,30 @@
 **One full query**
 
 ```
-$ python app.py ask '...'
+$ python app.py ask 'vintage graphic tee under $30'
+
+     Found:    Y2K Baby Tee — Butterfly Print — $18.0 on depop
+
+     Outfit:   Grab it! That butterfly tee is a total win.
+
+Outfit one: Pair the Y2K Baby Tee — Butterfly Print with your Baggy straight-leg jeans, dark wash and Chunky white sneakers. Throw on the Vintage black denim jacket over top for that effortless early-2000s model-off-duty vibe.
+
+Outfit two: Tuck the tee into your Wide-leg khaki trousers, cinch it with the Brown leather belt, and wear your Black combat boots. Toss the Black cropped zip hoodie over your shoulders or wear it unzipped to finish the look.
+
+     Fit card: Found the ultimate early 2000s model-off-duty fit by styling this little butterfly baby tee with my favorite baggy dark-wash jeans and a vintage denim jacket. Snagged the top for just $18 over on depop and it’s honestly in the best condition. Such an easy throw-on-and-go look. #y2kstyle #thrifted
+
+0 model calls this session, 2 served from cache
+
+```
+
+**Empty-search branch**
+
+```
+$ python app.py ask 'designer ballgown size XXS under $5'
+
+     Nothing matched "designer ballgown". Try to raise the price limit above $5, or drop the size filter (XXS), or use fewer or more general keywords.
+
+0 model calls this session
 
 ```
 
