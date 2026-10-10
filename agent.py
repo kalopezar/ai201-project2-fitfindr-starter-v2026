@@ -172,8 +172,25 @@ def run_agent(query: str, wardrobe: dict) -> dict:
                 )
                 next_step = "done"
     except (MCPError, ModelUnavailable) as exc:
-        session["error"] = f"{active_tool} failed: {exc}"
-        trace.step(active_tool, note=f"failed: {exc}")
+        if isinstance(exc, MCPError):
+            session["error"] = (
+                "search_listings (via MCP) failed: listing search could not reach "
+                "the MCP server. Retry the search; if it keeps failing, check "
+                "the MCP server connection."
+            )
+        elif active_tool == "suggest_outfit":
+            session["error"] = (
+                "suggest_outfit failed: outfit suggestions could not be generated "
+                "because the model is unavailable. Check the model API key or "
+                "connection, then retry."
+            )
+        else:
+            session["error"] = (
+                "create_fit_card failed: fit-card generation could not be "
+                "completed because the model is unavailable. Check the model "
+                "API key or connection, then retry."
+            )
+        trace.step(active_tool, note=f"failed ({type(exc).__name__}); see session error")
 
     return session
 

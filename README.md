@@ -262,14 +262,92 @@ that produced it:
 **Happy path**
 
 ```
-
+[1] parse_query
+      in:  vintage graphic tee under $30
+      out: dict with keys: description, size, max_price
+[2] search_listings (via MCP)
+      in:  dict with keys: description, size, max_price
+      out: 10 items: Y2K Baby Tee — Butterfly Print, Graphic Tee — 2003 Tour Bootleg Style, Vintage Band Tee — Faded Grey … +7 more
+[3] suggest_outfit
+      in:  Y2K Baby Tee — Butterfly Print ($18.0, depop)
+      out: Grab it! That butterfly tee is a total win.   Outfit one: Pair the Y2K Baby Tee — Butterfly Print with your Ba…
+[4] create_fit_card
+      in:  dict with keys: outfit, new_item
+      out: Found the ultimate early 2000s model-off-duty fit by styling this little butterfly baby tee with my favorite b…
 ```
 
 **Empty search**
 
 ```
-
+[1] parse_query
+     in:  designer ballgown size XXS under $5
+     out: dict with keys: description, size, max_price
+[2] search_listings (via MCP)
+     in:  dict with keys: description, size, max_price
+     out: [] (empty)
+     →    branch: empty; stopping before suggest_outfit
 ```
+
+The empty-search run made 0 model calls. I also injected temporary failures at
+each tool boundary; the patches existed only in that test process:
+
+- `search_listings`: injected `MCPError("deliberate search failure")`; the
+  session reported `search_listings (via MCP) failed: deliberate search failure`
+  and stopped at trace step 2.
+- `suggest_outfit`: injected `ModelUnavailable("deliberate outfit failure")`;
+  the session reported `suggest_outfit failed: deliberate outfit failure` and
+  stopped at trace step 3.
+- `create_fit_card`: injected `ModelUnavailable("deliberate fit-card failure")`;
+  the session reported `create_fit_card failed: deliberate fit-card failure`
+  and stopped at trace step 4.
+
+After replacing raw exception details with user-facing messages, I repeated
+the three injected failures. The current messages name the failed tool and give
+a next step without exposing the injected exception:
+
+- `search_listings (via MCP) failed: listing search could not reach the MCP
+     server. Retry the search; if it keeps failing, check the MCP server connection.`
+- `suggest_outfit failed: outfit suggestions could not be generated because the
+     model is unavailable. Check the model API key or connection, then retry.`
+- `create_fit_card failed: fit-card generation could not be completed because
+     the model is unavailable. Check the model API key or connection, then retry.`
+
+**Three requested failure checks**
+
+- **Empty search:** `designer ballgown size XXS under $5` returned: `Nothing
+     matched "designer ballgown". Try to raise the price limit above $5, or drop
+     the size filter (XXS), or use fewer or more general keywords.` It stopped
+     after the MCP search and made 0 model calls.
+- **Empty wardrobe:** `python app.py ask 'denim jacket under $50'
+     --empty-wardrobe` returned:
+
+     ```
+     Found: Denim Jacket — Light Wash, Cropped — $42.0 on poshmark
+
+     Outfit: Grab it! That Wrangler jacket is a total wardrobe staple.
+
+     First, go for an effortless streetwear look. Pair the cropped cut with high-waisted black cargo pants and a tight ribbed white tank top. Add chunky sneakers and a crossbody bag to balance the structured shoulders.
+
+     Second, try a softer vintage vibe. Layer it right over a floral midi slip dress in darker tones to contrast the light wash. Finish this with comfortable canvas slip-on shoes and delicate silver jewelry.
+
+     Both ways keep the jacket as the star of the show. You will wear this all the time!
+
+     Fit card: Scored this vintage Wrangler light wash jacket on Poshmark for $42 and I’m already obsessed with the structured shoulders. Styled it with high-waisted black cargos and a tight ribbed tank for an easy streetwear vibe that I'm definitely going to wear on repeat.
+     ```
+- **Model unavailable:** I changed one character in `.env` and ran the new
+     query `mesh long-sleeve top black size S/M under $20`. It made 1 model call
+     (not a cache hit) and returned `suggest_outfit failed: Couldn't reach the
+     model: 'ascii' codec can't encode characters in position 59-61: ordinal not
+     in range(128)`. It did not hang or print a traceback. The response identified
+     an encoding error rather than explicitly identifying the rejected key; I
+     restored `.env` byte-for-byte after the run.
+
+     After removing low-level exception text from the handler, I changed one key
+     character again and ran the new query `faded grey vintage band tee size L
+     under $30`. It made 1 model call (not a cache hit) and said: `suggest_outfit
+     failed: outfit suggestions could not be generated because the model is
+     unavailable. Check the model API key or connection, then retry.` There was no
+     traceback, and `.env` was restored byte-for-byte.
 
 **On the MCP move:** <!-- what changed in your code, and whether anything
 behaved differently afterwards. If the rewire didn't work, say exactly where it
