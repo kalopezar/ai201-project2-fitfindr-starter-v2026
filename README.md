@@ -180,6 +180,12 @@ $ python -c "from tools import create_fit_card; from utils.data_loader import lo
 - *What came back:* The matching run selected `lst_002` as the first search result and passed that same item to `suggest_outfit`; the impossible query left `fit_card` as `None` and suggested which filters or keywords to change.
 - *What I changed:* I recorded the parsing and session flow plus both CLI outcomes in this README, and verified the handoff with a tool-call spy.
 
+**Moment 3**
+
+- *What I asked for:* I asked Copilot to diagnose why all five baseline fit cards missed the purchase-details criterion and to make one improvement, then rerun all five criteria five times with caching off.
+- *What came back:* The model paraphrased the listing title because the prompt did not require the exact title. After tightening only that prompt, the final run passed the fit-card criterion 4 of 5 times; the remaining miss repeated `depop` in both the caption and `#depop`.
+- *What I changed:* I kept the original criterion and target, recorded both after runs and the side-by-side scores, and left the hashtag duplication as a documented next step rather than making a second unmeasured change.
+
 <!-- ═══════════════════════ UNIT 4 — THE TEST ═══════════════════════
 
      Don't fill these in during unit 3.
@@ -432,6 +438,8 @@ the expected optional `size` and `max_price` inputs. A direct-versus-MCP check
 for `graphic tee` with `max_price=30` returned the same six listing records.
 The end-to-end query `vintage graphic tee under $30` also completed and selected
 Y2K Baby Tee — Butterfly Print for $18 on depop, matching the previous sample.
+Only the call path changed from a direct Python function to MCP; the returned
+listings and end-to-end agent behavior did not visibly change.
 
 
 
