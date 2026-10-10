@@ -200,17 +200,75 @@ $ python -c "from tools import create_fit_card; from utils.data_loader import lo
 
 | Criterion | Target | Try 1 | Try 2 | Try 3 | Try 4 | Try 5 | Verdict |
 |---|---|---|---|---|---|---|---|
-| 1.  |  |  |  |  |  |  |  |
-| 2.  |  |  |  |  |  |  |  |
-| 3.  |  |  |  |  |  |  |  |
-| 4.  |  |  |  |  |  |  |  |
-| 5.  |  |  |  |  |  |  |  |
+| 1. A matching query completes all three tools | 4 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 2. An impossible query stops before the second tool | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 3. The selected listing reaches outfit generation unchanged | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 4. Fit cards include the purchase details | 4 of 5 | FAIL | FAIL | FAIL | FAIL | FAIL | MISSED (0/5) |
+| 5. Search results respect the requested price ceiling | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
 
 **Real output from one try**, pasted as text, naming the file and function
 that produced it:
 
 ```
+Criterion 1, Try 1 — results/run_2026-10-10_0713_before.md, run_eval.py::main
+stopped early: no
+selected_item: Y2K Baby Tee — Butterfly Print ($18.0, depop)
+search_results: 10
+Fit card:
+Found this early 2000s butterfly baby tee on depop for $18 and it instantly unlocked my inner mall-rat era. Paired it with baggy dark-wash jeans and chunky sneakers for the ultimate low-effort, high-nostalgia fit.
 
+#y2kstyle
+
+Trace:
+[1] parse_query
+     in:  vintage graphic tee under $30
+     out: dict with keys: description, size, max_price
+[2] search_listings (via MCP)
+     in:  dict with keys: description, size, max_price
+     out: 10 items: Y2K Baby Tee — Butterfly Print, Graphic Tee — 2003 Tour Bootleg Style, Vintage Band Tee — Faded Grey … +7 more
+[3] suggest_outfit
+     in:  Y2K Baby Tee — Butterfly Print ($18.0, depop)
+     out: Yes, grab that baby tee! It is going to look amazing with your closet.   Outfit one: Pair the Y2K Baby Tee wit…
+[4] create_fit_card
+     in:  dict with keys: outfit, new_item
+     out: Found this early 2000s butterfly baby tee on depop for $18 and it instantly unlocked my inner mall-rat era. Pa…
+
+Criterion 2, Try 1 — results/run_2026-10-10_0713_before.md, run_eval.py::main
+stopped early: yes — Nothing matched "designer ballgown". Try to raise the price limit above $5, or drop the size filter (XXS), or use fewer or more general keywords.
+selected_item: (none)
+search_results: 0
+Trace:
+[1] parse_query
+     in:  designer ballgown size XXS under $5
+     out: dict with keys: description, size, max_price
+[2] search_listings (via MCP)
+     in:  dict with keys: description, size, max_price
+     out: [] (empty)
+     →    branch: empty; stopping before suggest_outfit
+
+Criterion 3, Try 1 — results/run_2026-10-10_0713_before.md, run_eval.py::main
+selected_item: Y2K Baby Tee — Butterfly Print ($18.0, depop)
+Trace:
+[1] parse_query
+     in:  vintage graphic tee under $30
+     out: dict with keys: description, size, max_price
+[2] search_listings (via MCP)
+     in:  dict with keys: description, size, max_price
+     out: 10 items: Y2K Baby Tee — Butterfly Print, Graphic Tee — 2003 Tour Bootleg Style, Vintage Band Tee — Faded Grey … +7 more
+[3] suggest_outfit
+     in:  Y2K Baby Tee — Butterfly Print ($18.0, depop)
+     out: You should definitely grab this! Here are two easy ways to style it using your current wardrobe:  Outfit One: …
+[4] create_fit_card
+     in:  dict with keys: outfit, new_item
+     out: Scored this little butterfly tee on Depop for just $18 and I’m so obsessed with the early 2000s energy. Had to…
+Supplemental output from agent.py::run_agent (model generation stubbed; MCP search real): Try 1: selected_id=lst_002, first_id=lst_002, prices=[18.0, 24.0, 19.0, 26.0, 22.0, 20.0, 30.0, 12.0, 24.0, 15.0], handoff=PASS
+
+Criterion 4, Try 3 — results/run_2026-10-10_0713_before.md, run_eval.py::main
+selected_item: Y2K Baby Tee — Butterfly Print ($18.0, depop)
+Fit card: Found this little butterfly tee on depop for eighteen bucks and I'm obsessed with the early 2000s street style energy. Paired it with my favorite baggy dark wash jeans and an oversized black denim jacket to balance out the tiny fit. Total $18 score.
+
+Criterion 5, Try 1 — supplemental five-session output from agent.py::run_agent (model generation stubbed; MCP search real)
+Try 1: selected_id=lst_002, first_id=lst_002, prices=[18.0, 24.0, 19.0, 26.0, 22.0, 20.0, 30.0, 12.0, 24.0, 15.0], handoff=PASS
 ```
 
 ---
