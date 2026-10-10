@@ -293,15 +293,28 @@ Try 1: selected_id=lst_002, first_id=lst_002, prices=[18.0, 24.0, 19.0, 26.0, 22
 
 | # | Criterion | Target | Verdict | How I decided |
 |---|---|---|---|---|
-| 1 |  |  |  |  |
-| 2 |  |  |  |  |
-| 3 |  |  |  |  |
-| 4 |  |  |  |  |
-| 5 |  |  |  |  |
+| 1 | Matching query completes all three tools | 4 of 5 | MET | All five `run_eval.py` attempts completed the search, outfit, and fit-card steps and returned a fit card. |
+| 2 | Impossible query stops before the second tool | 5 of 5 | MET | All five traces stopped after the empty MCP search, before `suggest_outfit`, and returned advice for changing the query. |
+| 3 | Selected listing reaches outfit generation unchanged | 5 of 5 | MET | All five evaluation traces showed the same title, price, and platform at `suggest_outfit`; a five-session state check confirmed the selected ID equaled the first result ID each time. |
+| 4 | Fit cards include the purchase details | 4 of 5 | MISSED | All five cards were 2-3 sentences, but none contained the complete selected listing title `Y2K Baby Tee — Butterfly Print`; try 3 also stated the price as both `eighteen bucks` and `$18`. |
+| 5 | Search results respect the requested price ceiling | 5 of 5 | MET | A five-session check returned the same ten search results each time; every price was at most $30.0. |
 
 **Diagnoses**
 
+Criterion 4 missed its target: 0 of 5 cards passed.
 
+- **Step:** Model output in `tools.py::create_fit_card`.
+- **Mechanism:** The prompt asks the model to mention the item but does not
+     require the exact listing title. The model paraphrased `Y2K Baby Tee —
+     Butterfly Print` as "this little butterfly tee," "Y2K butterfly baby tee,"
+     or similar, so the full title appeared in 0 of 5 cards. All five cards met
+     the sentence-count target. Try 3 also described the price as "eighteen bucks"
+     and then repeated it as "$18". Search, selection, and session handoff worked;
+     the miss is specifically the model-output constraint.
+
+**Pattern:** All five failures are the same repeated `create_fit_card` model-
+output behavior: title paraphrasing. No separate search, branch, or session
+failure appeared in these runs.
 
 ---
 
