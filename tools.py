@@ -239,12 +239,14 @@ def create_fit_card(outfit: str, new_item: dict) -> str:
     )
     prompt = (
         f"The thrifted item:\n{_describe_item(new_item)}\n"
+        f"Required exact title: {new_item['title']}\n"
         f"Price: ${new_item['price']:g}\n"
         f"Platform: {new_item['platform']}\n\n"
         f"The outfit:\n{outfit}\n\n"
-        "Write a 2-4 sentence caption for a post showing this outfit. Mention "
-        "the item, the price, and the platform exactly once each, and be "
-        "specific about the vibe of the look."
+        "Write a 2-4 sentence caption for a post showing this outfit. Use the "
+        "required exact title verbatim exactly once. Mention the price and "
+        "platform exactly once each. Do not shorten or paraphrase the title, "
+        "and do not repeat these details. Be specific about the vibe of the look."
     )
 
     response = generate(prompt, system=system).strip()
