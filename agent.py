@@ -17,8 +17,9 @@ import re
 
 import config
 import trace
-from tools import search_listings, suggest_outfit, create_fit_card
+from mcp_client import MCPError, call_tool
 from generate import ModelUnavailable
+from tools import suggest_outfit, create_fit_card
 
 
 # ── session state ─────────────────────────────────────────────────────────────
@@ -110,41 +111,69 @@ def run_agent(query: str, wardrobe: dict) -> dict:
     session = new_session(query, wardrobe)
 
     next_step = "parse"
+    active_tool = "query parsing"
     count = 0
 
-    while next_step != "done":
-        count += 1
-        trace.check_iterations(count)
+    try:
+        while next_step != "done":
+            count += 1
+            trace.check_iterations(count)
 
-        if next_step == "parse":
-            session["parsed"] = parse_query(query)
-            next_step = "search"
+            if next_step == "parse":
+                active_tool = "query parsing"
+                session["parsed"] = parse_query(query)
+                trace.step("parse_query", inputs=query, returned=session["parsed"])
+                next_step = "search"
 
-        elif next_step == "search":
-            parsed = session["parsed"]
-            session["search_results"] = search_listings(
-                parsed["description"], parsed["size"], parsed["max_price"]
-            )
-            # The branch: nothing found means stop here, not suggest an outfit
-            # for an item that doesn't exist.
-            if not session["search_results"]:
-                session["error"] = _no_results_message(parsed)
+            elif next_step == "search":
+                active_tool = "search_listings (via MCP)"
+                parsed = session["parsed"]
+                session["search_results"] = call_tool("search_listings", parsed)
+                if not session["search_results"]:
+                    session["error"] = _no_results_message(parsed)
+                    trace.step(
+                        active_tool,
+                        inputs=parsed,
+                        returned=session["search_results"],
+                        note="branch: empty; stopping before suggest_outfit",
+                    )
+                    next_step = "done"
+                else:
+                    trace.step(
+                        active_tool,
+                        inputs=parsed,
+                        returned=session["search_results"],
+                    )
+                    session["selected_item"] = session["search_results"][0]
+                    next_step = "suggest"
+
+            elif next_step == "suggest":
+                active_tool = "suggest_outfit"
+                session["outfit_suggestion"] = suggest_outfit(
+                    session["selected_item"], session["wardrobe"]
+                )
+                trace.step(
+                    active_tool,
+                    inputs=session["selected_item"],
+                    returned=session["outfit_suggestion"],
+                )
+                next_step = "fit_card"
+
+            elif next_step == "fit_card":
+                active_tool = "create_fit_card"
+                session["fit_card"] = create_fit_card(
+                    session["outfit_suggestion"], session["selected_item"]
+                )
+                trace.step(
+                    active_tool,
+                    inputs={"outfit": session["outfit_suggestion"],
+                            "new_item": session["selected_item"]},
+                    returned=session["fit_card"],
+                )
                 next_step = "done"
-            else:
-                session["selected_item"] = session["search_results"][0]
-                next_step = "suggest"
-
-        elif next_step == "suggest":
-            session["outfit_suggestion"] = suggest_outfit(
-                session["selected_item"], session["wardrobe"]
-            )
-            next_step = "fit_card"
-
-        elif next_step == "fit_card":
-            session["fit_card"] = create_fit_card(
-                session["outfit_suggestion"], session["selected_item"]
-            )
-            next_step = "done"
+    except (MCPError, ModelUnavailable) as exc:
+        session["error"] = f"{active_tool} failed: {exc}"
+        trace.step(active_tool, note=f"failed: {exc}")
 
     return session
 

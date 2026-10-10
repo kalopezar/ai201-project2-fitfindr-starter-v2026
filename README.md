@@ -276,6 +276,14 @@ behaved differently afterwards. If the rewire didn't work, say exactly where it
 broke — the error text and the last thing that worked. That earns the point in
 full. -->
 
+`mcp_server.py` registers `search_listings` with the Tool Inventory's input
+names and types, and `agent.py::run_agent` calls it through
+`mcp_client.call_tool`. `python mcp_client.py` listed the registered tool with
+the expected optional `size` and `max_price` inputs. A direct-versus-MCP check
+for `graphic tee` with `max_price=30` returned the same six listing records.
+The end-to-end query `vintage graphic tee under $30` also completed and selected
+Y2K Baby Tee — Butterfly Print for $18 on depop, matching the previous sample.
+
 
 
 ---
