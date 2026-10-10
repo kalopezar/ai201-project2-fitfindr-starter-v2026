@@ -510,12 +510,21 @@ Try 5: selected_id=lst_002, first_id=lst_002, prices=[18.0, 24.0, 19.0, 26.0, 22
 
 ## What's Still Broken
 
-No acceptance criterion remains below its target in the after run. One of five
-fit cards in the dedicated criterion 4 scenario repeated the platform as a
-hashtag, so the prompt does not fully enforce exactly-once detail counts on
-every generation. The previous after run had one intermittent model failure;
-it did not recur in this rerun, though transient generation reliability still
-deserves monitoring.
+No acceptance criterion remains below its target in the final after run.
+Criterion 4 met its 4-of-5 target, but try 4 still failed: `depop` appeared in
+the caption and again in `#depop`.
+
+- **Next step for criterion 4:** Add a post-generation check for exact title,
+     price, platform, and sentence counts, then regenerate or repair a caption
+     that fails. I stopped after the prompt-only change because it moved the score
+     from 0/5 to 4/5, meeting the target; adding validation now would be a second
+     change and would need its own measured run.
+- **Generation reliability:** The earlier after run at
+     `results/run_2026-10-10_0733_after.md` had one `ModelUnavailable` during
+     `create_fit_card`; it did not recur in the final 0739 run. If it recurs, I
+     would add a bounded retry for transient model unavailability and measure it
+     separately. I stopped here because criterion 1 passed 5/5 in the final run
+     and a retry change was outside the single-prompt experiment.
 
 
 
