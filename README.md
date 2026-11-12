@@ -631,6 +631,31 @@ also tested in each clone. Full captured test and server output is in
 | 4. Logs include summaries and omit full wardrobe and generated text | 5 records, 0/15 sentinel matches | 5/5, 0/15 | 5/5, 0/15 | 5/5, 0/15 | MET |
 | 5. The documented command starts the local server | 1 of 1 within 30s | 1/1, 1.67s | 1/1, 1.52s | 1/1, 1.53s | MET |
 
+Run 1 produced the following real output for each criterion. The first four
+lines are the unittest runner output; the last is the captured HTTP health
+response from the server process.
+
+1. Source: `tests/test_serve.py`, `ServeCriteriaTests.test_criterion_1_five_successful_runs_have_required_fields`
+   ```text
+   test_criterion_1_five_successful_runs_have_required_fields (test_serve.ServeCriteriaTests.test_criterion_1_five_successful_runs_have_required_fields) ... ok
+   ```
+2. Source: `tests/test_serve.py`, `ServeCriteriaTests.test_criterion_2_three_failure_types_each_leave_error_record`
+   ```text
+   test_criterion_2_three_failure_types_each_leave_error_record (test_serve.ServeCriteriaTests.test_criterion_2_three_failure_types_each_leave_error_record) ... ok
+   ```
+3. Source: `tests/test_serve.py`, `ServeCriteriaTests.test_criterion_3_five_distinct_requests_append_in_order`
+   ```text
+   test_criterion_3_five_distinct_requests_append_in_order (test_serve.ServeCriteriaTests.test_criterion_3_five_distinct_requests_append_in_order) ... ok
+   ```
+4. Source: `tests/test_serve.py`, `ServeCriteriaTests.test_criterion_4_five_records_keep_summaries_and_omit_payloads`
+   ```text
+   test_criterion_4_five_records_keep_summaries_and_omit_payloads (test_serve.ServeCriteriaTests.test_criterion_4_five_records_keep_summaries_and_omit_payloads) ... ok
+   ```
+5. Source: `serve.py`, `health`
+   ```text
+   health: HTTP 200 {"status":"ok"} in 1.67s
+   ```
+
 All five criteria met their targets in all three runs. No failures or missed
 criteria were observed in these runs.
 
