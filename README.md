@@ -631,6 +631,15 @@ also tested in each clone. Full captured test and server output is in
 | 4. Logs include summaries and omit full wardrobe and generated text | 5 records, 0/15 sentinel matches | 5/5, 0/15 | 5/5, 0/15 | 5/5, 0/15 | MET |
 | 5. The documented command starts the local server | 1 of 1 within 30s | 1/1, 1.67s | 1/1, 1.52s | 1/1, 1.53s | MET |
 
+### Milestone 6 — Diagnosis
+
+All five criteria are MET against their Milestone 4 targets in all three
+trials, so there are no misses to diagnose and no failing behavior to fix.
+Criteria 1–4 were rerun as automated endpoint tests with `run_agent` mocked;
+their identical pass counts reflect repeatable checks of logging behavior,
+not repeated model generations. Criterion 5 was checked with a real server
+process in each fresh clone.
+
 Run 1 produced the following real output for each criterion. The first four
 lines are the unittest runner output; the last is the captured HTTP health
 response from the server process.
