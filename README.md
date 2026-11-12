@@ -596,6 +596,26 @@ and took 37,723.06 ms, and remains in the average. The API does not provide
 billed USD to this application, so no dollar cost is claimed. Full per-run
 calculations are in [`results/run_cost_2026-11-11.md`](results/run_cost_2026-11-11.md).
 
+## Extension Criteria — First Run
+
+Criteria 1–4 were exercised with
+`python -m unittest discover -s tests -v`. The success, append, and privacy
+checks use the Flask test client with a stubbed agent response, so they test
+the logging behavior and do not spend model calls. The failure test triggers
+each of the three error paths directly.
+
+| Criterion | Observed result | Verdict |
+|---|---|---|
+| 1. Five successful records contain required fields | 5 of 5 valid JSON records had the required fields, status, outcome, and non-negative usage/duration | MET |
+| 2. Three failure types leave error records | Rejected input: 400/`invalid_query`; returned error session: 200/`agent_error`; raised exception: 500/`server_error`; all 3 records had `output.error` | MET |
+| 3. Appends persist in request order | Starting with an absent log, 5 distinct requests produced 5 parseable lines with queries in order | MET |
+| 4. Summaries are retained without payload sentinels | 5 records had the expected wardrobe counts and selected IDs; 0 of 15 wardrobe/outfit/caption sentinel values appeared | MET |
+| 5. Clean-checkout startup reaches health endpoint | Fresh clone, dependencies installed, `python serve.py`; `/health` returned `{"status":"ok"}` in 2.47 seconds | MET |
+
+Test output: **4 tests passed** for criteria 1–4. Criterion 5 was a separate
+fresh-clone process check and passed 1 of 1 startup attempt. No criterion missed
+its target on this first run.
+
 
 
 <!-- ═════════════════════════════════════════════════════════════════════
