@@ -173,11 +173,16 @@ Gemini API model (`gemini-3.5-flash-lite` by default); local model-file size is
 0 bytes. The local data is `data/listings.json` (19,171 bytes) and
 `data/wardrobe_schema.json` (3,381 bytes).
 
-Each `/ask` writes one JSON log record to the server's standard output. It
-includes UTC time, request ID, route, HTTP status, outcome, duration, model ID,
-model-call/cache-hit counts, and measured input/output/total tokens. Query
-text and credentials are omitted. A real request log, captured from a local
-run, is committed in
+Each `/ask` appends one JSON object per line to
+`results/agent_requests.jsonl`. Records include a UTC timestamp, request ID,
+route, HTTP status, outcome, duration, model ID, the search query and wardrobe
+item count, a summary of the result, and model-call/cache-hit and measured
+input/output/total token counts. The query is stored verbatim; wardrobe
+contents, generated outfit/caption text, and credentials are not. This runtime
+file is git-ignored because it can contain user queries. Read it with
+`Get-Content -Encoding UTF8 results/agent_requests.jsonl` in PowerShell or
+`cat results/agent_requests.jsonl` in macOS/Linux. A real request log, captured
+from a local run, is committed in
 [`results/path_b_local_run_2026-11-11.md`](results/path_b_local_run_2026-11-11.md).
 
 Run the local serving and structured-log regression tests with:

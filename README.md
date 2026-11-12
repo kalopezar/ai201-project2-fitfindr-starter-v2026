@@ -47,7 +47,7 @@ FitFindr helps someone search thrift listings with a plain-language request, inc
 
 ## The Shape
 
-I’m choosing **Shape B: local with logs**. I’m extending the existing FitFindr agent with a local HTTP entry point and one structured JSON record per request, so I can start it with a single documented command, observe a real run afterward, and measure its latency and model-token usage without changing the existing search-and-style flow. I considered adding a second retriever, deploying the service to a host, and building a persistent dashboard for the logs, but those are out of scope; this unit keeps the existing retriever, runs locally, and writes records to standard output.
+I’m choosing **Shape B: local with logs**. I’m extending the existing FitFindr agent with a local HTTP entry point and one structured JSON record per request, so I can start it with a single documented command, observe a real run afterward, and measure its latency and model-token usage without changing the existing search-and-style flow. I considered adding a second retriever, deploying the service to a host, and building a persistent dashboard for the logs, but those are out of scope; this unit keeps the existing retriever, runs locally, and appends records to a readable JSONL file.
 
 ---
 
@@ -539,8 +539,9 @@ the caption and again in `#depop`.
 ## Local Run Record — Path B
 
 The local server starts with `python serve.py` after environment setup. Each
-`POST /ask` emits a structured JSON line with measured duration and model token
-usage. The committed output from a real local request is in
+`POST /ask` appends a structured JSON record with its input summary, output
+summary, measured duration, and model token usage to
+`results/agent_requests.jsonl`. The committed output from a real local request is in
 [`results/path_b_local_run_2026-11-11.md`](results/path_b_local_run_2026-11-11.md);
 the exact startup command, environment, dependencies, and model-file details
 are in [`RUNNING.md`](RUNNING.md).

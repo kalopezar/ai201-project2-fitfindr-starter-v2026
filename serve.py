@@ -27,9 +27,9 @@ web server has to be. The reason is worth reading before you deploy: see the
 note above `_one_at_a_time` below — it also decides which gunicorn worker you
 can use.
 
-Each /ask request emits one structured JSON log line with its status, elapsed
-time, outcome, and model/token/cache usage. Query text and credentials are
-deliberately excluded.
+Each /ask request appends one structured JSON record to
+`results/agent_requests.jsonl`. It includes the query and a summary of the
+agent output, but not wardrobe contents, generated text, or credentials.
 """
 
 import json
@@ -51,6 +51,8 @@ from generate import usage_snapshot
 from utils.data_loader import get_example_wardrobe
 
 app = Flask(__name__)
+LOG_PATH = config.RESULTS_DIR / "agent_requests.jsonl"
+_log_lock = threading.Lock()
 
 
 def _log_agent_request(
@@ -60,6 +62,8 @@ def _log_agent_request(
     outcome: str,
     usage_before: dict[str, int],
     usage_after: dict[str, int],
+    input_summary: dict,
+    output_summary: dict,
     error_type: str | None = None,
 ) -> None:
     usage = {
@@ -68,7 +72,7 @@ def _log_agent_request(
     }
     record = {
         "event": "agent_request",
-        "timestamp_utc": datetime.now(timezone.utc).isoformat(
+        "timestamp": datetime.now(timezone.utc).isoformat(
             timespec="milliseconds"
         ).replace("+00:00", "Z"),
         "request_id": request_id,
@@ -77,12 +81,19 @@ def _log_agent_request(
         "status_code": status_code,
         "duration_ms": round((time.perf_counter() - started_at) * 1000, 2),
         "outcome": outcome,
-        "model": config.MODEL,
+        "model_id": config.MODEL,
+        "input": input_summary,
+        "output": output_summary,
         "usage": usage,
     }
     if error_type is not None:
         record["error_type"] = error_type
-    print(json.dumps(record, ensure_ascii=False), flush=True)
+    line = json.dumps(record, ensure_ascii=False) + "\n"
+    with _log_lock:
+        LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with LOG_PATH.open("a", encoding="utf-8") as log_file:
+            log_file.write(line)
+            log_file.flush()
 
 
 # ── one request at a time ─────────────────────────────────────────────────────
@@ -154,10 +165,18 @@ def ask():
         query = query.strip()
     else:
         query = ""
+    input_summary = {"query": query, "wardrobe_item_count": 0}
     if not query:
         # 400 rather than a stack trace: the caller can act on this one.
         _log_agent_request(
-            request_id, started_at, 400, "invalid_query", empty_usage, empty_usage
+            request_id,
+            started_at,
+            400,
+            "invalid_query",
+            empty_usage,
+            empty_usage,
+            input_summary,
+            {"error": "A non-empty query is required."},
         )
         return jsonify({"error": "Send JSON with a 'query' field, e.g. "
                                  '{"query": "vintage graphic tee under $30"}'}), 400
@@ -165,6 +184,10 @@ def ask():
     wardrobe = payload.get("wardrobe")
     if not isinstance(wardrobe, dict):
         wardrobe = get_example_wardrobe()
+    wardrobe_items = wardrobe.get("items")
+    input_summary["wardrobe_item_count"] = (
+        len(wardrobe_items) if isinstance(wardrobe_items, list) else 0
+    )
 
     # A queued request should look like a queued request. Without this the
     # second caller just sits there, and "slow" and "waiting its turn" are
@@ -204,13 +227,35 @@ def ask():
             "server_error",
             usage_before,
             usage_after,
+            input_summary,
+            {"error": failure},
             failure_type,
         )
         return jsonify({"error": failure}), 500
 
     outcome = "agent_error" if session["error"] else "success"
+    selected_item = session.get("selected_item")
+    selected_summary = None
+    if isinstance(selected_item, dict):
+        selected_summary = {
+            key: selected_item.get(key)
+            for key in ("id", "title", "price", "platform")
+        }
+    output_summary = {
+        "error": session.get("error"),
+        "selected_item": selected_summary,
+        "has_outfit_suggestion": bool(session.get("outfit_suggestion")),
+        "has_fit_card": bool(session.get("fit_card")),
+    }
     _log_agent_request(
-        request_id, started_at, 200, outcome, usage_before, usage_after
+        request_id,
+        started_at,
+        200,
+        outcome,
+        usage_before,
+        usage_after,
+        input_summary,
+        output_summary,
     )
     return jsonify(session)
 
