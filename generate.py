@@ -174,6 +174,15 @@ def token_counts() -> dict:
     }
 
 
+def usage_snapshot() -> dict[str, int]:
+    """Return a point-in-time snapshot of model and cache usage counters."""
+    return {
+        "model_calls": _session_calls,
+        "cache_hits": _cache_hits,
+        **{f"{name}_tokens": count for name, count in token_counts().items()},
+    }
+
+
 def _record_tokens(response) -> None:
     """
     Add one response's token counts to the session total.

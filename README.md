@@ -527,6 +527,17 @@ the caption and again in `#depop`.
      that fails. I stopped after the prompt-only change because it moved the score
      from 0/5 to 4/5, meeting the target; adding validation now would be a second
      change and would need its own measured run.
+
+---
+
+## Local Run Record — Path B
+
+The local server starts with `python serve.py` after environment setup. Each
+`POST /ask` emits a structured JSON line with measured duration and model token
+usage. The committed output from a real local request is in
+[`results/path_b_local_run_2026-11-11.md`](results/path_b_local_run_2026-11-11.md);
+the exact startup command, environment, dependencies, and model-file details
+are in [`RUNNING.md`](RUNNING.md).
 - **Generation reliability:** The earlier after run at
      `results/run_2026-10-10_0733_after.md` had one `ModelUnavailable` during
      `create_fit_card`; it did not recur in the final 0739 run. If it recurs, I

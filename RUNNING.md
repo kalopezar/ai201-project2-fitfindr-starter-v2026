@@ -125,14 +125,38 @@ Everything above exits when the command finishes. A host has nothing to keep
 running, so before you can deploy this you need something that stays up.
 `serve.py` is that: the same `run_agent()`, behind two HTTP routes.
 
-On your machine:
+### Path B: run locally with a record
+
+Use Python 3.11, 3.12, or 3.13 (the recorded run below used Python 3.11.0).
+From a clean checkout, create and activate the environment using the commands
+under **Before your first class**, install `requirements.txt`, and set
+`GEMINI_API_KEY` in `.env`. Then, from the repository root with the virtual
+environment active, the exact command to start the local system is:
 
 ```bash
 python serve.py
-curl -X POST http://localhost:5000/ask \
-  -H 'Content-Type: application/json' \
-  -d '{"query": "vintage graphic tee under $30"}'
 ```
+
+The server listens at `http://localhost:5000`; check `GET /health`, then send
+a `POST /ask` request as shown below. Press Ctrl-C to stop it. The startup
+command was tested from a clean checkout.
+
+`requirements.txt` bounds every direct dependency. The recorded environment
+resolved these direct packages to exact versions: `python-dotenv 1.1.1`,
+`google-genai 1.75.0`, `mcp 1.30.0`, `Flask 3.1.3`, and `gunicorn 23.0.0`.
+`gunicorn` is installed for hosted runs; the local command uses Flask.
+
+FitFindr does not download or load a local model. It calls the configured
+Gemini API model (`gemini-3.5-flash-lite` by default); local model-file size is
+0 bytes. The local data is `data/listings.json` (19,171 bytes) and
+`data/wardrobe_schema.json` (3,381 bytes).
+
+Each `/ask` writes one JSON log record to the server's standard output. It
+includes UTC time, request ID, route, HTTP status, outcome, duration, model ID,
+model-call/cache-hit counts, and measured input/output/total tokens. Query
+text and credentials are omitted. A real request log, captured from a local
+run, is committed in
+[`results/path_b_local_run_2026-11-11.md`](results/path_b_local_run_2026-11-11.md).
 
 On a host, the start command is:
 
@@ -148,10 +172,6 @@ gunicorn serve:app
 | It answers one request at a time | On purpose. A second request waits for the first to finish, and prints `[serve] another request is still running` while it waits. An MCP tool call starts a whole second Python process, and the free tier's 512 MB has no room for two of those at once — and `generate.py`'s rate-limit counting assumes one caller. The reasoning is written out in `serve.py` |
 | `gunicorn serve:app`, exactly | Not `-k gevent`, not `-k eventlet`, not wrapped for uvicorn. `mcp_client.call_tool` uses `asyncio.run()`, which won't start inside a running event loop, so an async worker breaks **every** MCP call — and only once you've deployed it |
 | The first request is slow | The free tier puts your app to sleep after about fifteen minutes of nothing. The next request wakes it up and waits for it — around a minute. Not a bug, and worth knowing before you demo it |
-
-`serve.py` ships with **no logging and no timing in it**, on purpose. You add
-that yourself in the follow-along, before you deploy — instrumenting first is
-the point of the session.
 
 ---
 

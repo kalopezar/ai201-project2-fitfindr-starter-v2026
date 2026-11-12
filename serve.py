@@ -27,15 +27,18 @@ web server has to be. The reason is worth reading before you deploy: see the
 note above `_one_at_a_time` below — it also decides which gunicorn worker you
 can use.
 
-⚠️ There is deliberately NO logging, NO timing and NO request counting in this
-file. That is unit 9's follow-along: you instrument this yourself, first, and
-then deploy it. A structured log you were handed teaches you nothing about
-what belongs in one — and the timing field is the one everybody skips.
+Each /ask request emits one structured JSON log line with its status, elapsed
+time, outcome, and model/token/cache usage. Query text and credentials are
+deliberately excluded.
 """
 
+import json
 import os
 import sys
 import threading
+import time
+import uuid
+from datetime import datetime, timezone
 
 # config first, and before anything that talks to the model: it loads your .env
 # and fixes the Windows console encoding for every module that imports it.
@@ -44,9 +47,42 @@ import config  # noqa: F401
 from flask import Flask, jsonify, request
 
 from agent import run_agent
+from generate import usage_snapshot
 from utils.data_loader import get_example_wardrobe
 
 app = Flask(__name__)
+
+
+def _log_agent_request(
+    request_id: str,
+    started_at: float,
+    status_code: int,
+    outcome: str,
+    usage_before: dict[str, int],
+    usage_after: dict[str, int],
+    error_type: str | None = None,
+) -> None:
+    usage = {
+        key: usage_after[key] - usage_before[key]
+        for key in usage_before
+    }
+    record = {
+        "event": "agent_request",
+        "timestamp_utc": datetime.now(timezone.utc).isoformat(
+            timespec="milliseconds"
+        ).replace("+00:00", "Z"),
+        "request_id": request_id,
+        "method": request.method,
+        "path": request.path,
+        "status_code": status_code,
+        "duration_ms": round((time.perf_counter() - started_at) * 1000, 2),
+        "outcome": outcome,
+        "model": config.MODEL,
+        "usage": usage,
+    }
+    if error_type is not None:
+        record["error_type"] = error_type
+    print(json.dumps(record, ensure_ascii=False), flush=True)
 
 
 # ── one request at a time ─────────────────────────────────────────────────────
@@ -107,10 +143,22 @@ def ask():
                                                 example wardrobe the CLI uses.
     Out:  the session dict from run_agent(), as JSON.
     """
-    payload = request.get_json(silent=True) or {}
-    query = (payload.get("query") or "").strip()
+    request_id = uuid.uuid4().hex
+    started_at = time.perf_counter()
+    empty_usage = usage_snapshot()
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        payload = {}
+    query = payload.get("query")
+    if isinstance(query, str):
+        query = query.strip()
+    else:
+        query = ""
     if not query:
         # 400 rather than a stack trace: the caller can act on this one.
+        _log_agent_request(
+            request_id, started_at, 400, "invalid_query", empty_usage, empty_usage
+        )
         return jsonify({"error": "Send JSON with a 'query' field, e.g. "
                                  '{"query": "vintage graphic tee under $30"}'}), 400
 
@@ -123,11 +171,9 @@ def ask():
     # indistinguishable from the outside — which is how people conclude the
     # deployment is broken when it is behaving exactly as designed.
     #
-    # This is NOT the logging you add in the follow-along. It prints nothing
-    # on the normal path, carries no timing and counts nothing; it says only
-    # that this request had to wait. `locked()` can be a moment out of date,
-    # so the note is occasionally missed — which costs nothing, because
-    # nothing depends on it.
+    # This supplements the JSON completion record with an immediate note for a
+    # queued caller. `locked()` can be a moment out of date, so the note is
+    # occasionally missed — which costs nothing, because nothing depends on it.
     if _one_at_a_time.locked():
         print(
             "  [serve] another request is still running. This one is waiting "
@@ -137,18 +183,35 @@ def ask():
         )
 
     failure = None
+    failure_type = None
     session = None
     with _one_at_a_time:
+        usage_before = usage_snapshot()
         try:
             session = run_agent(query, wardrobe)
         except Exception as exc:  # noqa: BLE001 — a 500 with a sentence beats a hang
             failure = f"{type(exc).__name__}: {exc}"
+            failure_type = type(exc).__name__
+        usage_after = usage_snapshot()
 
     # Outside the lock: building a response is not work the next caller should
     # be waiting on.
     if failure is not None:
+        _log_agent_request(
+            request_id,
+            started_at,
+            500,
+            "server_error",
+            usage_before,
+            usage_after,
+            failure_type,
+        )
         return jsonify({"error": failure}), 500
 
+    outcome = "agent_error" if session["error"] else "success"
+    _log_agent_request(
+        request_id, started_at, 200, outcome, usage_before, usage_after
+    )
     return jsonify(session)
 
 
