@@ -544,20 +544,23 @@ Try 5: selected_id=lst_002, first_id=lst_002, prices=[18.0, 24.0, 19.0, 26.0, 22
 
 ## What's Still Broken
 
-No acceptance criterion was below target in the first final after run, but
-criterion 4 still had one known residual failure: `depop` appeared in the
-caption and again in `#depop`. That prompt-only run scored 4 of 5, and the
-follow-up below records the next single-change experiment.
+No criterion was missed in the latest three full trials: all five met their
+original Milestone 4 targets in each run, including fit-card purchase details
+in 15 of 15 generated cards.
 
-- **At the time:** A post-generation check for exact title, price, platform,
-     and sentence counts was a possible next step. Instead, the follow-up below
-     tests one narrower prompt change aimed at the diagnosed hashtag duplication.
-- **Generation reliability:** The earlier after run at
-     `results/run_2026-10-10_0733_after.md` had one `ModelUnavailable` during
-     `create_fit_card`; it did not recur in the final 0739 run. If it recurs, I
-     would add a bounded retry for transient model unavailability and measure it
-     separately. I stopped here because criterion 1 passed 5/5 in the final run
-     and a retry change was outside the single-prompt experiment.
+The original startup target was too low in strictness (too lenient): criterion
+5 allowed 30 seconds, while the three measured clean-clone starts took only
+1.52–1.67 seconds. I revised it to require the health response within
+5 seconds, leaving room above the observed times while providing a more useful
+startup bound. That tighter target has not yet been rerun, so it remains
+unverified rather than a recorded miss. I stopped after the three full
+five-criterion trials; validating the revised startup threshold is the
+remaining test.
+
+With another unit, I would first run the documented startup from several clean
+checkouts and measure cold-start time against the revised 5-second target.
+That would validate the only tightened criterion still untested and catch
+setup delays that a warm local process can hide.
 
 ## Follow-up Improvement — Fit-Card Hashtags
 
@@ -689,6 +692,16 @@ startup and network/model waits. All ten runs succeeded; one included a retry
 and took 37,723.06 ms, and remains in the average. The API does not provide
 billed USD to this application, so no dollar cost is claimed. Full per-run
 calculations are in [`results/run_cost_2026-11-11.md`](results/run_cost_2026-11-11.md).
+This is the measured sample before the later fit-card hashtag prompt change;
+the ten-run token average has not been remeasured after that small prompt
+addition.
+
+**At 100 people per day:** Assuming one uncached run per person with the same
+request profile, `100 people × 1 run/person × 848.5 tokens/run = 84,850
+reported model tokens per day` (and `100 × 7,953.48 ms = 795,348 ms`, or about
+13.26 minutes of request time if handled sequentially); actual dollar spend
+cannot be calculated from this application-side measurement because the API
+does not return billed USD.
 
 ## Extension Criteria — First Run
 
@@ -773,6 +786,35 @@ response from the server process.
 All five criteria met their targets in all three runs. No failures or missed
 criteria were observed in these runs.
 
+## Capstone
+
+### How I Used AI
+
+**Moment 1**
+
+- *What I asked for:* I asked Copilot to trace the remaining fit-card failure to a specific stage and explain why the platform appeared twice.
+- *What came back:* The failure was in `tools.py::create_fit_card`: the prompt required one platform mention but allowed hashtags without forbidding the platform name in them.
+- *What I changed:* I added one prompt instruction excluding the platform name from hashtags, plus a focused test that checks the generated prompt includes this constraint.
+
+**Moment 2**
+
+- *What I asked for:* I asked Copilot to rerun all five criteria three times after that single change, with caching off, and compare the results with the prior run.
+- *What came back:* All 15 fresh fit-card outputs met the title, price, platform, and sentence-count requirements; the four deterministic criteria remained at 5/5 in every trial. The report also distinguished actual model generations from supplemental mocked checks for real search handoff and price filtering.
+- *What I changed:* I kept the original targets, pasted the before/after scores and full trial reports, and recorded the possible loss of platform-tag discoverability as an unmeasured trade-off rather than claiming improved engagement.
+
+**Moment 3**
+
+- *What I asked for:* I asked Copilot to finish the measured cost arithmetic and check the submission checklist against repository evidence.
+- *What came back:* The ten-run sample measured 848.5 reported tokens and 7.95 seconds per request, but the API did not expose billed USD; the review also found the tightened 5-second startup target had not yet been rerun.
+- *What I changed:* I showed the multiplication for 100 daily runs, documented the still-unverified startup target, and identified clean-checkout cold-start measurement as the first next step.
+
+**Repository URL:** https://github.com/kalopezar/ai201-project2-fitfindr-starter-v2026
+
+**Submission checklist review:** `criteria.md`, `RUNNING.md`, `mcp_server.py`,
+the five-criterion before/after logs, failure-path tests, and the three new
+full-run reports are present. The repository history contains more than four
+commits. The revised 5-second startup target remains the one unverified item;
+the original 30-second startup criterion passed all three recorded runs.
 
 
 <!-- ═════════════════════════════════════════════════════════════════════
