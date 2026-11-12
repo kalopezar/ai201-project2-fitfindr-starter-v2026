@@ -158,6 +158,16 @@ text and credentials are omitted. A real request log, captured from a local
 run, is committed in
 [`results/path_b_local_run_2026-11-11.md`](results/path_b_local_run_2026-11-11.md).
 
+Run the local serving and structured-log regression tests with:
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+They cover a successful request, invalid request bodies, and an agent error.
+The tests use Python's built-in `unittest` and Flask test client; they do not
+make model API calls.
+
 On a host, the start command is:
 
 ```bash
