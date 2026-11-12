@@ -121,6 +121,26 @@ class ServeLoggingTests(unittest.TestCase):
         self.assertEqual(record["error_type"], "ValueError")
         self.assertEqual(record["output"], {"error": "ValueError: test failure"})
 
+    def test_agent_reported_failure_is_logged(self):
+        message = "The model could not be reached. Try again."
+        session = {
+            "error": message,
+            "selected_item": None,
+            "outfit_suggestion": None,
+            "fit_card": None,
+        }
+        with patch.object(serve, "run_agent", return_value=session):
+            response = self.client.post("/ask", json={"query": "test search"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json(), session)
+        [record] = self.log_records()
+        self.assertEqual(record["outcome"], "agent_error")
+        self.assertEqual(record["output"]["error"], message)
+        self.assertIsNone(record["output"]["selected_item"])
+        self.assertFalse(record["output"]["has_outfit_suggestion"])
+        self.assertFalse(record["output"]["has_fit_card"])
+
     def test_records_append_as_separate_json_lines(self):
         for query in ("first", "second"):
             with patch.object(serve, "run_agent", return_value={"error": "no match"}):
