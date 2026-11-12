@@ -246,7 +246,9 @@ def create_fit_card(outfit: str, new_item: dict) -> str:
         "Write a 2-4 sentence caption for a post showing this outfit. Use the "
         "required exact title verbatim exactly once. Mention the price and "
         "platform exactly once each. Do not shorten or paraphrase the title, "
-        "and do not repeat these details. Be specific about the vibe of the look."
+        "and do not repeat these details. Do not use the platform name in any "
+        "hashtag; use only style-related hashtags unrelated to the seller. "
+        "Be specific about the vibe of the look."
     )
 
     response = generate(prompt, system=system).strip()

@@ -491,11 +491,31 @@ changed.
 **Did it help, and how do I know:** Yes, for the targeted miss. Criterion 4
 went from 0/5 cards containing the complete title to 4/5 cards containing the
 exact title, price, and platform in 2-4 sentences, meeting its unchanged 4/5
-target. Try 4 failed because the platform appeared twice: once as `depop` in
-the caption and again in `#depop`. All five matching-query attempts completed
-all tools in this rerun. The after run used caching off; its complete
-25-attempt output is in `results/run_2026-10-10_0739_after.md`, produced by
-`run_eval.py::main`.
+target.
+
+**Diagnosis of the remaining Try 4 miss:** The failure is in model output from
+`tools.py::create_fit_card`, not search, selection, or session handoff. In
+the recorded Criterion 4 Try 4 in
+[`results/run_2026-10-10_0739_after.md`](results/run_2026-10-10_0739_after.md),
+the fit card says `Grabbed it on depop for just $18 and it's already my favorite
+throwing-on piece for running errands. #depop`. The prompt asks the model to
+mention the platform once but also allows one or two hashtags; it does not
+exclude the platform name from hashtag text. The model therefore emitted the
+platform once in the caption and a second time in a hashtag, violating the
+exactly-once criterion despite including the exact title and price. All five
+matching-query attempts completed all tools in this rerun. The after run used
+caching off; its complete 25-attempt output is in
+`results/run_2026-10-10_0739_after.md`, produced by `run_eval.py::main`.
+
+**Pattern across the fit-card misses:** The five baseline failures were not
+five independent problems: all came from the same `create_fit_card` model-
+output stage, where unconstrained generation paraphrased the required title.
+The prompt change fixed that symptom in four of five after-trials. The one
+remaining failure is another symptom at that same stage—the model repeated the
+platform in a hashtag because the prompt did not prohibit it there. Search,
+branching, and session handoff were not implicated. This is one broader
+constraint-following weakness in generated captions, with title omission and
+platform duplication as its observed symptoms.
 
 Criterion 4, Try 1 output from `results/run_2026-10-10_0739_after.md`:
 
@@ -524,21 +544,95 @@ Try 5: selected_id=lst_002, first_id=lst_002, prices=[18.0, 24.0, 19.0, 26.0, 22
 
 ## What's Still Broken
 
-No acceptance criterion remains below its target in the final after run.
-Criterion 4 met its 4-of-5 target, but try 4 still failed: `depop` appeared in
-the caption and again in `#depop`.
+No acceptance criterion was below target in the first final after run, but
+criterion 4 still had one known residual failure: `depop` appeared in the
+caption and again in `#depop`. That prompt-only run scored 4 of 5, and the
+follow-up below records the next single-change experiment.
 
-- **Next step for criterion 4:** Add a post-generation check for exact title,
-     price, platform, and sentence counts, then regenerate or repair a caption
-     that fails. I stopped after the prompt-only change because it moved the score
-     from 0/5 to 4/5, meeting the target; adding validation now would be a second
-     change and would need its own measured run.
+- **At the time:** A post-generation check for exact title, price, platform,
+     and sentence counts was a possible next step. Instead, the follow-up below
+     tests one narrower prompt change aimed at the diagnosed hashtag duplication.
 - **Generation reliability:** The earlier after run at
      `results/run_2026-10-10_0733_after.md` had one `ModelUnavailable` during
      `create_fit_card`; it did not recur in the final 0739 run. If it recurs, I
      would add a bounded retry for transient model unavailability and measure it
      separately. I stopped here because criterion 1 passed 5/5 in the final run
      and a retry change was outside the single-prompt experiment.
+
+## Follow-up Improvement — Fit-Card Hashtags
+
+**One change:** In `tools.py::create_fit_card`, I added one prompt instruction:
+do not use the platform name in any hashtag; use only style-related hashtags
+unrelated to the seller. This targets the diagnosed `#depop` duplication and
+does not add post-generation validation or retries.
+
+**Full rerun:** I ran `python run_eval.py --tries 5` three separate times with
+caching off and temperature 0.9. Each full run exercised all five criteria
+five times. The three reports contain the real output for all 75 scenario
+attempts:
+
+- [Run 1](results/run_2026-11-11_2248_milestone6_fix_run1.md)
+- [Run 2](results/run_2026-11-11_2253_milestone6_fix_run2.md)
+- [Run 3](results/run_2026-11-11_2255_milestone6_fix_run3.md)
+
+| Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
+|---|---|---|---|---|---|
+| 1. Matching query completes all three tools | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 2. Impossible query stops before the second tool | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 3. Selected listing reaches outfit generation unchanged | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 4. Fit cards include title, price, and platform exactly once | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 5. Search results respect the requested price ceiling | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
+
+### Before / After — Hashtag Prompt Change
+
+“Before” is the 5-try run immediately before adding the platform-hashtag
+instruction (`results/run_2026-10-10_0739_after.md`). The after columns are
+the three new full trials above; each cell is the number of passing tries
+against the unchanged target.
+
+| Criterion | Target | Before | After Run 1 | After Run 2 | After Run 3 |
+|---|---|---:|---:|---:|---:|
+| 1. Matching query completes all three tools | 4 of 5 | 5/5 | 5/5 | 5/5 | 5/5 |
+| 2. Impossible query stops before the second tool | 5 of 5 | 5/5 | 5/5 | 5/5 | 5/5 |
+| 3. Selected listing reaches outfit generation unchanged | 5 of 5 | 5/5 | 5/5 | 5/5 | 5/5 |
+| 4. Fit cards include title, price, and platform exactly once | 4 of 5 | 4/5 | 5/5 | 5/5 | 5/5 |
+| 5. Search results respect the requested price ceiling | 5 of 5 | 5/5 | 5/5 | 5/5 | 5/5 |
+
+**Did it help?** Yes. Criterion 4 improved from 4/5 before the change to 5/5
+in each of the three after trials (15/15 generated cards); the other four
+criteria stayed at 5/5, with no measured regression. The trade is that captions
+no longer use seller/platform names as hashtags, which may reduce seller-tag
+discoverability. These runs measured criterion compliance, not social reach,
+so any engagement effect is unknown.
+
+All 15 generated fit cards had the exact title, price, and platform exactly
+once, used 2–4 sentences, and did not repeat the platform in a hashtag.
+Criteria 3 and 5 also received five supplemental real-search checks per trial;
+generation was stubbed for these deterministic checks. The recorded IDs and
+prices were:
+
+```text
+Trial 1:
+Try 1: selected_id=lst_002, first_id=lst_002, prices=[18.0, 24.0, 19.0, 26.0, 22.0, 20.0, 30.0, 12.0, 24.0, 15.0], handoff=PASS, price_ceiling=PASS
+Try 2: selected_id=lst_002, first_id=lst_002, prices=[18.0, 24.0, 19.0, 26.0, 22.0, 20.0, 30.0, 12.0, 24.0, 15.0], handoff=PASS, price_ceiling=PASS
+Try 3: selected_id=lst_002, first_id=lst_002, prices=[18.0, 24.0, 19.0, 26.0, 22.0, 20.0, 30.0, 12.0, 24.0, 15.0], handoff=PASS, price_ceiling=PASS
+Try 4: selected_id=lst_002, first_id=lst_002, prices=[18.0, 24.0, 19.0, 26.0, 22.0, 20.0, 30.0, 12.0, 24.0, 15.0], handoff=PASS, price_ceiling=PASS
+Try 5: selected_id=lst_002, first_id=lst_002, prices=[18.0, 24.0, 19.0, 26.0, 22.0, 20.0, 30.0, 12.0, 24.0, 15.0], handoff=PASS, price_ceiling=PASS
+Trial 2:
+Try 1: selected_id=lst_002, first_id=lst_002, prices=[18.0, 24.0, 19.0, 26.0, 22.0, 20.0, 30.0, 12.0, 24.0, 15.0], handoff=PASS, price_ceiling=PASS
+Try 2: selected_id=lst_002, first_id=lst_002, prices=[18.0, 24.0, 19.0, 26.0, 22.0, 20.0, 30.0, 12.0, 24.0, 15.0], handoff=PASS, price_ceiling=PASS
+Try 3: selected_id=lst_002, first_id=lst_002, prices=[18.0, 24.0, 19.0, 26.0, 22.0, 20.0, 30.0, 12.0, 24.0, 15.0], handoff=PASS, price_ceiling=PASS
+Try 4: selected_id=lst_002, first_id=lst_002, prices=[18.0, 24.0, 19.0, 26.0, 22.0, 20.0, 30.0, 12.0, 24.0, 15.0], handoff=PASS, price_ceiling=PASS
+Try 5: selected_id=lst_002, first_id=lst_002, prices=[18.0, 24.0, 19.0, 26.0, 22.0, 20.0, 30.0, 12.0, 24.0, 15.0], handoff=PASS, price_ceiling=PASS
+Trial 3:
+Try 1: selected_id=lst_002, first_id=lst_002, prices=[18.0, 24.0, 19.0, 26.0, 22.0, 20.0, 30.0, 12.0, 24.0, 15.0], handoff=PASS, price_ceiling=PASS
+Try 2: selected_id=lst_002, first_id=lst_002, prices=[18.0, 24.0, 19.0, 26.0, 22.0, 20.0, 30.0, 12.0, 24.0, 15.0], handoff=PASS, price_ceiling=PASS
+Try 3: selected_id=lst_002, first_id=lst_002, prices=[18.0, 24.0, 19.0, 26.0, 22.0, 20.0, 30.0, 12.0, 24.0, 15.0], handoff=PASS, price_ceiling=PASS
+Try 4: selected_id=lst_002, first_id=lst_002, prices=[18.0, 24.0, 19.0, 26.0, 22.0, 20.0, 30.0, 12.0, 24.0, 15.0], handoff=PASS, price_ceiling=PASS
+Try 5: selected_id=lst_002, first_id=lst_002, prices=[18.0, 24.0, 19.0, 26.0, 22.0, 20.0, 30.0, 12.0, 24.0, 15.0], handoff=PASS, price_ceiling=PASS
+```
+
+The prompt test and existing tests also passed: `Ran 5 tests ... OK`.
 
 ---
 
@@ -634,11 +728,22 @@ also tested in each clone. Full captured test and server output is in
 ### Milestone 6 — Diagnosis
 
 All five criteria are MET against their Milestone 4 targets in all three
-trials, so there are no misses to diagnose and no failing behavior to fix.
+trials, so there are no misses among the local-logging criteria.
 Criteria 1–4 were rerun as automated endpoint tests with `run_agent` mocked;
 their identical pass counts reflect repeatable checks of logging behavior,
 not repeated model generations. Criterion 5 was checked with a real server
-process in each fresh clone.
+process in each fresh clone. The earlier model-based fit-card miss and its
+post-improvement residual Try 4 failure are diagnosed in the Unit 4 section
+above; those are separate from these local-logging trials.
+
+**Target review:** All five local-logging criteria met their targets in all
+three trials. The 5-of-5 correctness targets for required records, failure
+records, append order, and privacy were not set low: they test deterministic
+logging guarantees, and a single missing, reordered, or leaking record would
+be a real defect. The startup target was loose, however. The measured starts
+took 1.52–1.67 seconds against a 30-second ceiling, so I recorded a stricter
+5-second follow-up target under criterion 5 in `criteria.md`. The original
+target and results remain intact; the tighter target has not yet been rerun.
 
 Run 1 produced the following real output for each criterion. The first four
 lines are the unittest runner output; the last is the captured HTTP health

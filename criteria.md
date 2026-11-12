@@ -108,6 +108,17 @@ speed more than correctness; a looser one would let a stalled startup pass.
 The exact health body confirms the app itself is listening, not just that a
 process exists.
 
+> **Revised after Milestone 6:** From a clean checkout with the documented
+> environment set up, run `python serve.py`. Within 5 seconds, `GET /health`
+> must return HTTP 200 and the exact JSON body `{"status":"ok"}` — 1 of 1
+> startup checks.
+>
+> **Why revised:** The original 30-second target was met, but all three clean-
+> clone starts returned the health response in 1.52–1.67 seconds. Five seconds
+> remains above the measured times to allow for normal variation while being
+> a meaningful startup bound. This is a stricter follow-up target; the original
+> criterion and its three-run results remain unchanged.
+
 ---
 
 ## 1. A matching query completes all three tools
