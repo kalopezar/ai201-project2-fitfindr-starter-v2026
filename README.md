@@ -553,15 +553,48 @@ is in
 the exact startup command, environment, dependencies, and model-file details
 are in [`RUNNING.md`](RUNNING.md).
 
-## Measured Run Cost
+## Instrumentation
 
-Ten sequential uncached requests averaged **848.5 model-reported tokens** and
-**7.95 seconds elapsed** per run. This was measured from per-request JSONL
-usage counters and `time.perf_counter()` durations, not estimated from a
-pricing page. The full method and all ten results are in
-[`results/run_cost_2026-11-11.md`](results/run_cost_2026-11-11.md). The API
-does not return billed USD to this application, so the measured cost is
-reported as token usage and elapsed time, not dollars.
+The running server appends one JSON object per line to the git-ignored
+`results/agent_requests.jsonl`. Each record includes timestamp, request ID,
+method/path/status, duration, outcome, model ID, query and wardrobe count,
+selected listing summary, and per-request model-call/cache/token usage. These
+are the ten consecutive successful records from a real ten-run measurement
+with caching disabled:
+
+```jsonl
+{"event":"agent_request","timestamp":"2026-11-12T03:10:36.245Z","request_id":"e31bfcae9cb44f64bd9864ffe4724049","method":"POST","path":"/ask","status_code":200,"duration_ms":11413.82,"outcome":"success","model_id":"gemini-3.5-flash-lite","input":{"query":"vintage graphic tee under $30","wardrobe_item_count":10},"output":{"error":null,"selected_item":{"id":"lst_002","title":"Y2K Baby Tee — Butterfly Print","price":18.0,"platform":"depop"},"has_outfit_suggestion":true,"has_fit_card":true},"usage":{"model_calls":2,"cache_hits":0,"prompt_tokens":660,"output_tokens":203,"total_tokens":863}}
+{"event":"agent_request","timestamp":"2026-11-12T03:10:39.559Z","request_id":"e4426c0aa09d4ac5b6eedaa2d74258da","method":"POST","path":"/ask","status_code":200,"duration_ms":3260.36,"outcome":"success","model_id":"gemini-3.5-flash-lite","input":{"query":"vintage graphic tee under $30","wardrobe_item_count":10},"output":{"error":null,"selected_item":{"id":"lst_002","title":"Y2K Baby Tee — Butterfly Print","price":18.0,"platform":"depop"},"has_outfit_suggestion":true,"has_fit_card":true},"usage":{"model_calls":2,"cache_hits":0,"prompt_tokens":647,"output_tokens":194,"total_tokens":841}}
+{"event":"agent_request","timestamp":"2026-11-12T03:10:43.113Z","request_id":"054a80d7ffba4cd0abc0c500bfc11171","method":"POST","path":"/ask","status_code":200,"duration_ms":3542.02,"outcome":"success","model_id":"gemini-3.5-flash-lite","input":{"query":"vintage graphic tee under $30","wardrobe_item_count":10},"output":{"error":null,"selected_item":{"id":"lst_002","title":"Y2K Baby Tee — Butterfly Print","price":18.0,"platform":"depop"},"has_outfit_suggestion":true,"has_fit_card":true},"usage":{"model_calls":2,"cache_hits":0,"prompt_tokens":638,"output_tokens":194,"total_tokens":832}}
+{"event":"agent_request","timestamp":"2026-11-12T03:10:46.067Z","request_id":"e0347cb15ab84abc97de2fc454ea30a0","method":"POST","path":"/ask","status_code":200,"duration_ms":2937.79,"outcome":"success","model_id":"gemini-3.5-flash-lite","input":{"query":"vintage graphic tee under $30","wardrobe_item_count":10},"output":{"error":null,"selected_item":{"id":"lst_002","title":"Y2K Baby Tee — Butterfly Print","price":18.0,"platform":"depop"},"has_outfit_suggestion":true,"has_fit_card":true},"usage":{"model_calls":2,"cache_hits":0,"prompt_tokens":650,"output_tokens":184,"total_tokens":834}}
+{"event":"agent_request","timestamp":"2026-11-12T03:10:49.150Z","request_id":"012980a3b6ab48e8aaec9a32e6e82e3e","method":"POST","path":"/ask","status_code":200,"duration_ms":3041.78,"outcome":"success","model_id":"gemini-3.5-flash-lite","input":{"query":"vintage graphic tee under $30","wardrobe_item_count":10},"output":{"error":null,"selected_item":{"id":"lst_002","title":"Y2K Baby Tee — Butterfly Print","price":18.0,"platform":"depop"},"has_outfit_suggestion":true,"has_fit_card":true},"usage":{"model_calls":2,"cache_hits":0,"prompt_tokens":652,"output_tokens":180,"total_tokens":832}}
+{"event":"agent_request","timestamp":"2026-11-12T03:10:52.328Z","request_id":"750208979fb845a98fc9de9f75013fdf","method":"POST","path":"/ask","status_code":200,"duration_ms":3163.51,"outcome":"success","model_id":"gemini-3.5-flash-lite","input":{"query":"vintage graphic tee under $30","wardrobe_item_count":10},"output":{"error":null,"selected_item":{"id":"lst_002","title":"Y2K Baby Tee — Butterfly Print","price":18.0,"platform":"depop"},"has_outfit_suggestion":true,"has_fit_card":true},"usage":{"model_calls":2,"cache_hits":0,"prompt_tokens":656,"output_tokens":205,"total_tokens":861}}
+{"event":"agent_request","timestamp":"2026-11-12T03:10:55.693Z","request_id":"1936e119a35e4af9bbc28e6f595a355e","method":"POST","path":"/ask","status_code":200,"duration_ms":3354.74,"outcome":"success","model_id":"gemini-3.5-flash-lite","input":{"query":"vintage graphic tee under $30","wardrobe_item_count":10},"output":{"error":null,"selected_item":{"id":"lst_002","title":"Y2K Baby Tee — Butterfly Print","price":18.0,"platform":"depop"},"has_outfit_suggestion":true,"has_fit_card":true},"usage":{"model_calls":2,"cache_hits":0,"prompt_tokens":652,"output_tokens":208,"total_tokens":860}}
+{"event":"agent_request","timestamp":"2026-11-12T03:11:33.427Z","request_id":"3b27672782c846a996d4d73bfda8d14c","method":"POST","path":"/ask","status_code":200,"duration_ms":37723.06,"outcome":"success","model_id":"gemini-3.5-flash-lite","input":{"query":"vintage graphic tee under $30","wardrobe_item_count":10},"output":{"error":null,"selected_item":{"id":"lst_002","title":"Y2K Baby Tee — Butterfly Print","price":18.0,"platform":"depop"},"has_outfit_suggestion":true,"has_fit_card":true},"usage":{"model_calls":3,"cache_hits":0,"prompt_tokens":668,"output_tokens":221,"total_tokens":889}}
+{"event":"agent_request","timestamp":"2026-11-12T03:11:39.748Z","request_id":"a51af0e8209449d5b7f88cf73a6c66f8","method":"POST","path":"/ask","status_code":200,"duration_ms":6308.04,"outcome":"success","model_id":"gemini-3.5-flash-lite","input":{"query":"vintage graphic tee under $30","wardrobe_item_count":10},"output":{"error":null,"selected_item":{"id":"lst_002","title":"Y2K Baby Tee — Butterfly Print","price":18.0,"platform":"depop"},"has_outfit_suggestion":true,"has_fit_card":true},"usage":{"model_calls":2,"cache_hits":0,"prompt_tokens":654,"output_tokens":208,"total_tokens":862}}
+{"event":"agent_request","timestamp":"2026-11-12T03:11:44.547Z","request_id":"49b91a6935e44945b4146f40051635b5","method":"POST","path":"/ask","status_code":200,"duration_ms":4789.71,"outcome":"success","model_id":"gemini-3.5-flash-lite","input":{"query":"vintage graphic tee under $30","wardrobe_item_count":10},"output":{"error":null,"selected_item":{"id":"lst_002","title":"Y2K Baby Tee — Butterfly Print","price":18.0,"platform":"depop"},"has_outfit_suggestion":true,"has_fit_card":true},"usage":{"model_calls":2,"cache_hits":0,"prompt_tokens":631,"output_tokens":180,"total_tokens":811}}
+```
+
+One rejected-input run is included as well. This was sent through the Flask
+`/ask` route with a whitespace-only query; it returned HTTP 400 and persisted
+this record:
+
+```jsonl
+{"event":"agent_request","timestamp":"2026-11-12T03:14:40.288Z","request_id":"243e5ed00588466fb717fcb95ed215db","method":"POST","path":"/ask","status_code":400,"duration_ms":0.15,"outcome":"invalid_query","model_id":"gemini-3.5-flash-lite","input":{"query":"","wardrobe_item_count":0},"output":{"error":"A non-empty query is required."},"usage":{"model_calls":0,"cache_hits":0,"prompt_tokens":0,"output_tokens":0,"total_tokens":0}}
+```
+
+## What It Costs
+
+Measured ten sequential requests for the same query and default wardrobe with
+`AI201_CACHE=0`; each request had zero cache hits. I computed arithmetic means
+from each JSONL record: sum of `usage.total_tokens` / 10 = **848.5 model tokens
+per run**, and sum of `duration_ms` / 10 = **7,953.48 ms (7.95 seconds) per
+run**. The tokens are usage metadata returned by the model API; duration uses
+`time.perf_counter()` around the complete HTTP agent request, including MCP
+startup and network/model waits. All ten runs succeeded; one included a retry
+and took 37,723.06 ms, and remains in the average. The API does not provide
+billed USD to this application, so no dollar cost is claimed. Full per-run
+calculations are in [`results/run_cost_2026-11-11.md`](results/run_cost_2026-11-11.md).
 
 
 
