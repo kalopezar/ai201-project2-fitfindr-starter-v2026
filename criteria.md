@@ -26,63 +26,71 @@ These are the five criteria for the local-serving and persistent-logging
 extension. The original agent criteria from Unit 3 remain below as historical
 baseline criteria.
 
-### 1. Successful runs leave complete structured records
+### 1. Five successful runs produce records with required fields
 
-For five successful `POST /ask` requests, each request appends exactly one
-valid JSON object to `results/agent_requests.jsonl`. Every record contains a
-UTC timestamp, request ID, input query, output summary, non-negative duration,
-HTTP status, outcome, and per-request token/model-call usage — 5 of 5 requests.
+Send five successful `POST /ask` requests. Each request must append exactly
+one line to `results/agent_requests.jsonl`; all five lines must parse as JSON
+objects and contain `timestamp` (UTC string), `request_id` (non-empty string),
+`input.query` (string), `output` (object), `duration_ms` (number >= 0),
+`status_code` (200), `outcome` (`success`), and `usage` fields
+`model_calls`, `prompt_tokens`, `output_tokens`, and `total_tokens` (non-negative
+integers) — 5 of 5 records.
 
 **Why this target:**
-The log is the evidence used to understand an individual run later. One
-missing record or essential field leaves that run uninspectable; the local
-append operation and field construction are deterministic.
+These named values let me match a record to a run and inspect its result and
+measured usage. The local append operation and field construction are
+deterministic, so I expect all five records to satisfy the field checks.
 
-### 2. Failed runs are observable
+### 2. Each of three failure types produces an error record
 
 A rejected query, an agent-returned error session, and an exception raised by
-the agent each append a record with a non-success outcome and a useful error
-description — 3 of 3 failure types.
+the agent must each append exactly one record. The rejected query must have
+HTTP 400 and `outcome` `invalid_query`; the returned error session must have
+HTTP 200 and `outcome` `agent_error`; the raised exception must have HTTP 500
+and `outcome` `server_error`. Each record must have a non-empty
+`output.error` — 3 of 3 records.
 
 **Why this target:**
 These are three distinct ways a request can fail: before the agent, within its
-normal return path, or by raising. Testing each prevents errors from becoming
-silent gaps in the JSONL file.
+normal return path, or by raising. Checking each expected status, outcome, and
+error field makes a missing failure record directly observable.
 
 ### 3. Records persist as separate appended lines
 
-After five sequential requests, reopening `results/agent_requests.jsonl`
-produces five independently parseable JSON lines in request order, with no
-prior record overwritten — 5 of 5 records.
+Starting with an empty log file, send five sequential requests with distinct
+query strings. After closing and reopening `results/agent_requests.jsonl`, it
+must contain exactly five lines; every line must parse as one JSON object, and
+the recorded queries must match the five sent queries in the same order —
+5 of 5 records.
 
 **Why this target:**
 The file is intended as a durable run history, not transient console output.
-Appending rather than replacing is the central persistence behavior, and
-JSONL lets each record be parsed independently.
+Five distinct queries make overwriting, dropped lines, and reordered records
+detectable; JSONL lets each record be parsed independently.
 
-### 4. Logs retain useful summaries without copying private payloads
+### 4. Logs include summaries and omit full wardrobe and generated text
 
-For five requests containing distinct sentinel values in wardrobe item data
-and generated outfit/caption text, the corresponding log records include the
-wardrobe item count and selected-listing summary but contain none of those
-sentinel values — 5 of 5 records.
-
-**Why this target:**
-Later diagnosis needs to know the query and which listing was selected, but
-wardrobe details and full generated text are unnecessary to that diagnosis.
-Keeping the log to summaries reduces sensitive and bulky data retained on
-disk.
-
-### 5. The documented local server remains runnable
-
-From a clean checkout with the documented environment set up, running
-`python serve.py` allows `GET /health` to return HTTP 200 with
-`{"status":"ok"}` — 1 of 1 startup check.
+For five requests with known wardrobe sizes, selected listing IDs, and
+distinct sentinel strings in wardrobe item data, outfit suggestions, and fit
+cards, each record must contain the correct `input.wardrobe_item_count` and
+`output.selected_item.id`. None of the fifteen sentinel strings may occur in
+the five log lines — 5 of 5 records and 0 of 15 sentinel matches.
 
 **Why this target:**
-Persistent logging only helps if a reader can run the system outside the
-editor. The documented command and health endpoint provide a direct,
-observable check that setup and startup work together.
+Later diagnosis needs the wardrobe count and selected listing ID, but not
+wardrobe contents or full generated text. Checking known values and sentinel
+absence makes both requirements observable.
+
+### 5. The documented command starts the local server
+
+From a clean checkout with the documented environment set up, run
+`python serve.py`. Within 30 seconds, `GET /health` must return HTTP 200 and
+the exact JSON body `{"status":"ok"}` — 1 of 1 startup checks.
+
+**Why this target:**
+Persistent logging only helps if a reader can start the system outside the
+editor. The 30-second limit and exact health response make the setup and
+startup check repeatable and observable.
 
 ---
 
