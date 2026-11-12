@@ -45,6 +45,12 @@ FitFindr helps someone search thrift listings with a plain-language request, inc
 
 ---
 
+## The Shape
+
+I’m choosing **Shape B: local with logs**. I’m extending the existing FitFindr agent with a local HTTP entry point and one structured JSON record per request, so I can start it with a single documented command, observe a real run afterward, and measure its latency and model-token usage without changing the existing search-and-style flow. I considered adding a second retriever, deploying the service to a host, and building a persistent dashboard for the logs, but those are out of scope; this unit keeps the existing retriever, runs locally, and writes records to standard output.
+
+---
+
 ## Tool Inventory
 
 <!-- Four lines per tool. This is worth 2 points and it's the single most
