@@ -1,7 +1,7 @@
 # Acceptance criteria — FitFindr
 
-Five criteria that say what "working" means for this agent, written in unit 3
-**before** any results existed.
+This file preserves the original Unit 3 agent criteria and defines five new
+acceptance criteria for the local structured-logging extension.
 
 An acceptance criterion names a target: a number, a count, a rate, or something
 a person could plainly observe. *"The agent handles errors"* is an opinion.
@@ -15,7 +15,74 @@ data earns credit; *"80% seemed reasonable"* does not.
 > Missing your own targets next unit costs you nothing. Setting a target so
 > easy you can't miss it does.
 
-**Two are written for you. You write three.**
+The first five criteria below define the current local-logging extension. The
+original Unit 3 criteria are preserved afterward as baseline history.
+
+---
+
+## Unit extension — local structured logging
+
+These are the five criteria for the local-serving and persistent-logging
+extension. The original agent criteria from Unit 3 remain below as historical
+baseline criteria.
+
+### 1. Successful runs leave complete structured records
+
+For five successful `POST /ask` requests, each request appends exactly one
+valid JSON object to `results/agent_requests.jsonl`. Every record contains a
+UTC timestamp, request ID, input query, output summary, non-negative duration,
+HTTP status, outcome, and per-request token/model-call usage — 5 of 5 requests.
+
+**Why this target:**
+The log is the evidence used to understand an individual run later. One
+missing record or essential field leaves that run uninspectable; the local
+append operation and field construction are deterministic.
+
+### 2. Failed runs are observable
+
+A rejected query, an agent-returned error session, and an exception raised by
+the agent each append a record with a non-success outcome and a useful error
+description — 3 of 3 failure types.
+
+**Why this target:**
+These are three distinct ways a request can fail: before the agent, within its
+normal return path, or by raising. Testing each prevents errors from becoming
+silent gaps in the JSONL file.
+
+### 3. Records persist as separate appended lines
+
+After five sequential requests, reopening `results/agent_requests.jsonl`
+produces five independently parseable JSON lines in request order, with no
+prior record overwritten — 5 of 5 records.
+
+**Why this target:**
+The file is intended as a durable run history, not transient console output.
+Appending rather than replacing is the central persistence behavior, and
+JSONL lets each record be parsed independently.
+
+### 4. Logs retain useful summaries without copying private payloads
+
+For five requests containing distinct sentinel values in wardrobe item data
+and generated outfit/caption text, the corresponding log records include the
+wardrobe item count and selected-listing summary but contain none of those
+sentinel values — 5 of 5 records.
+
+**Why this target:**
+Later diagnosis needs to know the query and which listing was selected, but
+wardrobe details and full generated text are unnecessary to that diagnosis.
+Keeping the log to summaries reduces sensitive and bulky data retained on
+disk.
+
+### 5. The documented local server remains runnable
+
+From a clean checkout with the documented environment set up, running
+`python serve.py` allows `GET /health` to return HTTP 200 with
+`{"status":"ok"}` — 1 of 1 startup check.
+
+**Why this target:**
+Persistent logging only helps if a reader can run the system outside the
+editor. The documented command and health endpoint provide a direct,
+observable check that setup and startup work together.
 
 ---
 
