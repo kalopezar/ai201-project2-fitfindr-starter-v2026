@@ -533,6 +533,12 @@ the caption and again in `#depop`.
      that fails. I stopped after the prompt-only change because it moved the score
      from 0/5 to 4/5, meeting the target; adding validation now would be a second
      change and would need its own measured run.
+- **Generation reliability:** The earlier after run at
+     `results/run_2026-10-10_0733_after.md` had one `ModelUnavailable` during
+     `create_fit_card`; it did not recur in the final 0739 run. If it recurs, I
+     would add a bounded retry for transient model unavailability and measure it
+     separately. I stopped here because criterion 1 passed 5/5 in the final run
+     and a retry change was outside the single-prompt experiment.
 
 ---
 
@@ -541,16 +547,21 @@ the caption and again in `#depop`.
 The local server starts with `python serve.py` after environment setup. Each
 `POST /ask` appends a structured JSON record with its input summary, output
 summary, measured duration, and model token usage to
-`results/agent_requests.jsonl`. The committed output from a real local request is in
+`results/agent_requests.jsonl`. The committed output from a real local request
+is in
 [`results/path_b_local_run_2026-11-11.md`](results/path_b_local_run_2026-11-11.md);
 the exact startup command, environment, dependencies, and model-file details
 are in [`RUNNING.md`](RUNNING.md).
-- **Generation reliability:** The earlier after run at
-     `results/run_2026-10-10_0733_after.md` had one `ModelUnavailable` during
-     `create_fit_card`; it did not recur in the final 0739 run. If it recurs, I
-     would add a bounded retry for transient model unavailability and measure it
-     separately. I stopped here because criterion 1 passed 5/5 in the final run
-     and a retry change was outside the single-prompt experiment.
+
+## Measured Run Cost
+
+Ten sequential uncached requests averaged **848.5 model-reported tokens** and
+**7.95 seconds elapsed** per run. This was measured from per-request JSONL
+usage counters and `time.perf_counter()` durations, not estimated from a
+pricing page. The full method and all ten results are in
+[`results/run_cost_2026-11-11.md`](results/run_cost_2026-11-11.md). The API
+does not return billed USD to this application, so the measured cost is
+reported as token usage and elapsed time, not dollars.
 
 
 
