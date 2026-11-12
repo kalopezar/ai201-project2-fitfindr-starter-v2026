@@ -616,6 +616,24 @@ Test output: **4 tests passed** for criteria 1–4. Criterion 5 was a separate
 fresh-clone process check and passed 1 of 1 startup attempt. No criterion missed
 its target on this first run.
 
+## Run Log — Three Separate Runs
+
+Each run used a separate fresh clone. The four automated criterion tests were
+run once per clone; the documented server command and health endpoint were
+also tested in each clone. Full captured test and server output is in
+[`results/capstone_run_log_2026-11-11.md`](results/capstone_run_log_2026-11-11.md).
+
+| Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
+|---|---|---|---|---|---|
+| 1. Five successful runs produce records with required fields | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 2. Each of three failure types produces an error record | 3 of 3 | 3/3 | 3/3 | 3/3 | MET |
+| 3. Records persist as separate appended lines | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 4. Logs include summaries and omit full wardrobe and generated text | 5 records, 0/15 sentinel matches | 5/5, 0/15 | 5/5, 0/15 | 5/5, 0/15 | MET |
+| 5. The documented command starts the local server | 1 of 1 within 30s | 1/1, 1.67s | 1/1, 1.52s | 1/1, 1.53s | MET |
+
+All five criteria met their targets in all three runs. No failures or missed
+criteria were observed in these runs.
+
 
 
 <!-- ═════════════════════════════════════════════════════════════════════
