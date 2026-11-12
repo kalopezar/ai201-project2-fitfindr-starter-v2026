@@ -37,9 +37,11 @@ objects and contain `timestamp` (UTC string), `request_id` (non-empty string),
 integers) — 5 of 5 records.
 
 **Why this target:**
-These named values let me match a record to a run and inspect its result and
-measured usage. The local append operation and field construction are
-deterministic, so I expect all five records to satisfy the field checks.
+I require 5 of 5 rather than allowing a missed record because the local file
+append and field construction are deterministic; a missing request record
+would erase the only evidence for diagnosing that run. Requiring these specific
+fields is stricter than merely checking that a line exists, but without status,
+input, output, duration, and usage, the record would not explain what happened.
 
 ### 2. Each of three failure types produces an error record
 
@@ -52,8 +54,11 @@ and `outcome` `server_error`. Each record must have a non-empty
 
 **Why this target:**
 These are three distinct ways a request can fail: before the agent, within its
-normal return path, or by raising. Checking each expected status, outcome, and
-error field makes a missing failure record directly observable.
+normal return path, or by raising. I require all three rather than sampling
+one, because a failure path that produces no record is invisible after the
+fact. I check the expected status, outcome, and error field rather than
+requiring a particular provider message, which can vary while still leaving a
+diagnosable failure.
 
 ### 3. Records persist as separate appended lines
 
@@ -66,7 +71,10 @@ the recorded queries must match the five sent queries in the same order —
 **Why this target:**
 The file is intended as a durable run history, not transient console output.
 Five distinct queries make overwriting, dropped lines, and reordered records
-detectable; JSONL lets each record be parsed independently.
+detectable without asserting a bound on log-file size or lifetime, which this
+local extension does not manage. I require all five lines in order because
+even one overwritten or malformed record loses evidence and makes later
+accounting unreliable.
 
 ### 4. Logs include summaries and omit full wardrobe and generated text
 
@@ -79,7 +87,11 @@ the five log lines — 5 of 5 records and 0 of 15 sentinel matches.
 **Why this target:**
 Later diagnosis needs the wardrobe count and selected listing ID, but not
 wardrobe contents or full generated text. Checking known values and sentinel
-absence makes both requirements observable.
+absence makes both requirements observable. I require zero sentinel leaks
+across the five records because even one copied wardrobe detail or generated
+caption could expose more user content than the log needs; requiring those
+summaries preserves enough context to troubleshoot without retaining full
+payloads.
 
 ### 5. The documented command starts the local server
 
@@ -89,8 +101,12 @@ the exact JSON body `{"status":"ok"}` — 1 of 1 startup checks.
 
 **Why this target:**
 Persistent logging only helps if a reader can start the system outside the
-editor. The 30-second limit and exact health response make the setup and
-startup check repeatable and observable.
+editor. I chose 30 seconds to allow Python import and local server startup on
+the documented machine while still catching a hang or unusable command before
+a user waits through a class/demo. A stricter limit would measure machine
+speed more than correctness; a looser one would let a stalled startup pass.
+The exact health body confirms the app itself is listening, not just that a
+process exists.
 
 ---
 
