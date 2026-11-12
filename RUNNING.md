@@ -137,9 +137,31 @@ environment active, the exact command to start the local system is:
 python serve.py
 ```
 
-The server listens at `http://localhost:5000`; check `GET /health`, then send
-a `POST /ask` request as shown below. Press Ctrl-C to stop it. The startup
-command was tested from a clean checkout.
+The server listens on port `5000` on your machine. Check `GET /health`, then
+send a `POST /ask` request. In Windows PowerShell, use the IPv4 loopback
+address:
+
+```powershell
+Invoke-RestMethod -Uri 'http://127.0.0.1:5000/health'
+
+Invoke-RestMethod -Uri 'http://127.0.0.1:5000/ask' `
+  -Method Post `
+  -ContentType 'application/json' `
+  -Body '{"query": "vintage graphic tee under $30"}'
+```
+
+In macOS or Linux:
+
+```bash
+curl http://localhost:5000/health
+
+curl -X POST http://localhost:5000/ask \
+  -H 'Content-Type: application/json' \
+  -d '{"query": "vintage graphic tee under $30"}'
+```
+
+Press Ctrl-C to stop the server. The Windows setup and request commands were
+tested from a clean checkout.
 
 `requirements.txt` bounds every direct dependency. The recorded environment
 resolved these direct packages to exact versions: `python-dotenv 1.1.1`,
